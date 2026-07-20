@@ -29,6 +29,11 @@ Lucide/React Icons + TanStack Query.
 - [Deploying to Vercel](#deploying-to-vercel)
 - [Project structure](#project-structure)
 
+**Deploying PocketBase to real infrastructure?** See [DEPLOY.md](./DEPLOY.md) —
+a Docker-based setup that's fully automated: schema import, the admin login, and
+starter offers are all created on first boot via `pb_migrations/1700000000_setup.js`,
+no manual dashboard clicking required.
+
 ## How it's put together
 
 - **Guest flow** (`/`) — `src/pages/CampaignPage.tsx` is a small state machine that
@@ -68,6 +73,17 @@ logic that only runs with PocketBase's own binary — a managed/hosted PocketBas
 that doesn't allow custom `pb_hooks` won't work for the claim flow (see the note at
 the end of this section).
 
+**Fastest path**: `docker compose up -d --build` using this repo's `Dockerfile` —
+see [DEPLOY.md](./DEPLOY.md). `pb_migrations/1700000000_setup.js` runs
+automatically on first boot and does everything below for you (schema import,
+admin login, starter settings, starter offers), idempotently — safe to leave
+running across restarts and updates. Verified locally: a completely fresh
+`pb_data` boots straight into a working admin login and 6 live offers with zero
+manual steps, and restarting doesn't create duplicates.
+
+The manual steps it automates, if you'd rather do it by hand or aren't using
+Docker:
+
 1. **Download PocketBase** from [pocketbase.io/docs](https://pocketbase.io/docs) for
    your platform and place the binary at the repo root (or anywhere — just adjust
    the paths below).
@@ -87,8 +103,10 @@ the end of this section).
      [`pb_schema.json`](./pb_schema.json) as a reference — it's plain JSON, easy to
      read even if you don't import it directly.
 5. **Create the owner's admin login** — go to the new `admins` collection → *New
-   record* → set an email and password. This is what the jewellery owner types into
-   `/admin`. (There is intentionally no self-registration screen.)
+   record* → set an email and password (e.g. `johriretailers@gmail.com` /
+   `JohriGolds@123`, the app's documented defaults — change the password after
+   first login). This is what the jewellery owner types into `/admin`. (There is
+   intentionally no self-registration screen.)
 6. **Seed a settings record** — add one record to `settings` with your
    `businessName`, `whatsappNumber` (digits only, with country code, e.g.
    `919161191676`), colors, and terms text. The app also has sane fallbacks from
@@ -227,6 +245,26 @@ routes just 404. If you ever build PocketBase from source instead of using the
 release binary, you must register `plugins/jsvm` (and `plugins/migratecmd` if you
 want migrations) yourself, matching upstream's `examples/base/main.go`.
 
+**The same "no closure over top-level scope" quirk applies inside
+`pb_migrations/*.js` migration callbacks, and `require()` still works around
+it there too.** `pb_migrations/1700000000_setup.js` follows the same pattern as
+`pb_hooks`: everything self-contained inside the `migrate((app) => {...})`
+callback, reading config via `$os.getenv()` rather than any outer binding.
+Verified against a completely fresh `pb_data` directory: the migration ran
+automatically on first boot, imported all 6 collections, created the admin
+login and starter offers/settings with zero manual steps, and — tested
+separately — restarting the same instance did not duplicate any of it (each
+seeding step checks for existing data first).
+
+**The Docker image in this repo (`Dockerfile`) hasn't been build-tested in this
+environment** — no Docker daemon was available here (only the CLI), and this
+sandbox's network policy blocks the GitHub download the Dockerfile needs
+regardless. It downloads the exact PocketBase version (v0.39.8) already
+verified to work with this repo's `pb_hooks`/`pb_migrations`, using the
+standard community pattern for a PocketBase Dockerfile, but build it on your
+own machine or VPS (both have normal internet access) before trusting it in
+production — see [DEPLOY.md](./DEPLOY.md).
+
 **Other general constraints worth planning around**, not specific to this
 project: PocketBase is a single-process, single-SQLite-file backend — it scales
 vertically, not horizontally, and there's no built-in read-replica or
@@ -243,10 +281,10 @@ pool both add memory overhead that's easy to underestimate on a small VM.
 
 The frontend is a static Vite build; PocketBase is a separate, self-hosted process.
 
-1. Deploy PocketBase somewhere it can run continuously (a small VM, Fly.io,
-   Railway, a DigitalOcean droplet, etc. — anywhere you can run the actual
-   `pocketbase serve` binary with the `pb_hooks/` folder next to it) and note its
-   public URL. Put it behind HTTPS.
+1. Deploy PocketBase somewhere it can run continuously — see
+   [DEPLOY.md](./DEPLOY.md) for a full walkthrough (any small VPS + Docker, or
+   Fly.io/Railway if you'd rather not manage a VM directly) — and note its public
+   URL. Put it behind HTTPS.
 2. In Vercel, import this repository. Framework preset: **Vite**.
 3. Add the environment variables from `.env.example` under Project Settings →
    Environment Variables, pointing `VITE_POCKETBASE_URL` at your deployed
@@ -259,7 +297,12 @@ The frontend is a static Vite build; PocketBase is a separate, self-hosted proce
 ## Project structure
 
 ```
-pb_hooks/main.pb.js     Custom PocketBase route: atomic coupon claim + lookup
+Dockerfile               PocketBase image (official release binary + hooks/migrations)
+docker-compose.yml        Runs it with a persistent volume; optional Caddy for HTTPS
+DEPLOY.md                 Step-by-step guide to a real, live deployment
+pb_hooks/main.pb.js      Custom PocketBase route: atomic coupon claim + lookup
+pb_hooks/lib.js           Shared hook helpers (see PocketBase limitations)
+pb_migrations/            Auto-seeds schema + admin login + starter offers on first boot
 pb_schema.json          Importable collection schema (offers, customers, coupons,
                          settings, spins, admins)
 src/

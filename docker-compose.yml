@@ -1,0 +1,41 @@
+services:
+  pocketbase:
+    build: .
+    restart: unless-stopped
+    environment:
+      PB_ADMIN_EMAIL: ${PB_ADMIN_EMAIL:-johriretailers@gmail.com}
+      PB_ADMIN_PASSWORD: ${PB_ADMIN_PASSWORD:-JohriGolds@123}
+      PB_BUSINESS_NAME: ${PB_BUSINESS_NAME:-Johri Jewellers}
+      PB_WHATSAPP_NUMBER: ${PB_WHATSAPP_NUMBER:-919161191676}
+    volumes:
+      - pb_data:/pb/pb_data
+    # Exposes PocketBase directly on the host for local testing / if you're
+    # fronting it with your own reverse proxy. Remove this if you're using
+    # the caddy service below for HTTPS (Caddy talks to pocketbase over the
+    # internal docker network instead).
+    ports:
+      - "8090:8090"
+
+  # Optional but recommended for a real deployment: automatic HTTPS via
+  # Let's Encrypt. Needs a domain (e.g. api.johrijewellers.com) with an A
+  # record already pointing at this server's public IP. Set PB_DOMAIN below,
+  # then remove the `ports` block from the pocketbase service above and
+  # uncomment this service.
+  #
+  # caddy:
+  #   image: caddy:2-alpine
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   environment:
+  #     PB_DOMAIN: ${PB_DOMAIN:?set PB_DOMAIN to your api subdomain}
+  #   volumes:
+  #     - ./Caddyfile:/etc/caddy/Caddyfile
+  #     - caddy_data:/data
+  #   depends_on:
+  #     - pocketbase
+
+volumes:
+  pb_data:
+  # caddy_data:

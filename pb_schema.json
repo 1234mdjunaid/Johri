@@ -1,0 +1,560 @@
+[
+  {
+    "id": "71hfe86y5r215de",
+    "name": "offers",
+    "type": "base",
+    "system": false,
+    "listRule": "active = true",
+    "viewRule": "active = true",
+    "createRule": "@request.auth.collectionName = 'admins'",
+    "updateRule": "@request.auth.collectionName = 'admins'",
+    "deleteRule": "@request.auth.collectionName = 'admins'",
+    "fields": [
+      {
+        "id": "k9p34y6n3w",
+        "name": "title",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "primaryKey": false,
+        "min": 1,
+        "max": 60,
+        "pattern": "",
+        "autogeneratePattern": ""
+      },
+      {
+        "id": "d25rq4f5zr",
+        "name": "description",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "primaryKey": false,
+        "min": null,
+        "max": 200,
+        "pattern": "",
+        "autogeneratePattern": ""
+      },
+      {
+        "id": "37e3p3e2z8",
+        "name": "probability",
+        "type": "number",
+        "required": true,
+        "presentable": false,
+        "min": 1,
+        "max": 10,
+        "onlyInt": false
+      },
+      {
+        "id": "iq9y7jzb6c",
+        "name": "wheelColor",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "primaryKey": false,
+        "min": 4,
+        "max": 9,
+        "pattern": "",
+        "autogeneratePattern": ""
+      },
+      {
+        "id": "n6z43dvyrk",
+        "name": "active",
+        "type": "bool",
+        "required": false,
+        "presentable": false
+      },
+      {
+        "id": "ttnjfbf5jx",
+        "name": "validityDays",
+        "type": "number",
+        "required": true,
+        "presentable": false,
+        "min": 1,
+        "max": 365,
+        "onlyInt": false
+      },
+      {
+        "id": "vlsi47wqal",
+        "name": "created",
+        "type": "autodate",
+        "required": false,
+        "presentable": false,
+        "onCreate": true,
+        "onUpdate": false
+      },
+      {
+        "id": "9vq24zklmv",
+        "name": "updated",
+        "type": "autodate",
+        "required": false,
+        "presentable": false,
+        "onCreate": false,
+        "onUpdate": true
+      }
+    ],
+    "indexes": []
+  },
+  {
+    "id": "w1zcyqesh0arlh9",
+    "name": "customers",
+    "type": "base",
+    "system": false,
+    "listRule": "@request.auth.collectionName = 'admins'",
+    "viewRule": "@request.auth.collectionName = 'admins'",
+    "createRule": "@request.auth.collectionName = 'admins'",
+    "updateRule": "@request.auth.collectionName = 'admins'",
+    "deleteRule": "@request.auth.collectionName = 'admins'",
+    "fields": [
+      {
+        "id": "t45hu43jsi",
+        "name": "name",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "primaryKey": false,
+        "min": 2,
+        "max": 80,
+        "pattern": "",
+        "autogeneratePattern": ""
+      },
+      {
+        "id": "om1tma7v3d",
+        "name": "mobile",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "primaryKey": false,
+        "min": 10,
+        "max": 10,
+        "pattern": "^[6-9][0-9]{9}$",
+        "autogeneratePattern": ""
+      },
+      {
+        "id": "i8fppv5asp",
+        "name": "fingerprint",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "primaryKey": false,
+        "min": null,
+        "max": 200,
+        "pattern": "",
+        "autogeneratePattern": ""
+      },
+      {
+        "id": "zh8rzhqmoe",
+        "name": "couponId",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "primaryKey": false,
+        "min": null,
+        "max": 40,
+        "pattern": "",
+        "autogeneratePattern": ""
+      },
+      {
+        "id": "95b9ee0vbg",
+        "name": "created",
+        "type": "autodate",
+        "required": false,
+        "presentable": false,
+        "onCreate": true,
+        "onUpdate": false
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX `idx_customers_mobile` ON `customers` (`mobile`)"
+    ]
+  },
+  {
+    "id": "dl65o6mmg2ty7o5",
+    "name": "coupons",
+    "type": "base",
+    "system": false,
+    "listRule": "@request.auth.collectionName = 'admins'",
+    "viewRule": "@request.auth.collectionName = 'admins'",
+    "createRule": "@request.auth.collectionName = 'admins'",
+    "updateRule": "@request.auth.collectionName = 'admins'",
+    "deleteRule": "@request.auth.collectionName = 'admins'",
+    "fields": [
+      {
+        "id": "i09qynk8w3",
+        "name": "couponNumber",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "primaryKey": false,
+        "min": 1,
+        "max": 30,
+        "pattern": "",
+        "autogeneratePattern": ""
+      },
+      {
+        "id": "tzpppp6up3",
+        "name": "offer",
+        "type": "relation",
+        "required": true,
+        "presentable": false,
+        "collectionId": "71hfe86y5r215de",
+        "cascadeDelete": false,
+        "minSelect": 0,
+        "maxSelect": 1
+      },
+      {
+        "id": "c4dsa7l360",
+        "name": "offerTitle",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "primaryKey": false,
+        "min": null,
+        "max": 100,
+        "pattern": "",
+        "autogeneratePattern": ""
+      },
+      {
+        "id": "9y6n14do9g",
+        "name": "customer",
+        "type": "relation",
+        "required": true,
+        "presentable": false,
+        "collectionId": "w1zcyqesh0arlh9",
+        "cascadeDelete": false,
+        "minSelect": 0,
+        "maxSelect": 1
+      },
+      {
+        "id": "mnu77vtuuj",
+        "name": "customerName",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "primaryKey": false,
+        "min": null,
+        "max": 80,
+        "pattern": "",
+        "autogeneratePattern": ""
+      },
+      {
+        "id": "596lguax1d",
+        "name": "mobile",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "primaryKey": false,
+        "min": 10,
+        "max": 10,
+        "pattern": "^[6-9][0-9]{9}$",
+        "autogeneratePattern": ""
+      },
+      {
+        "id": "xn9y1xj5gx",
+        "name": "redeemed",
+        "type": "bool",
+        "required": false,
+        "presentable": false
+      },
+      {
+        "id": "nameyywlec",
+        "name": "expiryDate",
+        "type": "date",
+        "required": true,
+        "presentable": false,
+        "min": "",
+        "max": ""
+      },
+      {
+        "id": "fpecxvm11h",
+        "name": "created",
+        "type": "autodate",
+        "required": false,
+        "presentable": false,
+        "onCreate": true,
+        "onUpdate": false
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX `idx_coupons_number` ON `coupons` (`couponNumber`)",
+      "CREATE UNIQUE INDEX `idx_coupons_mobile` ON `coupons` (`mobile`)"
+    ]
+  },
+  {
+    "id": "zinc42ei5e6ohtn",
+    "name": "settings",
+    "type": "base",
+    "system": false,
+    "listRule": "",
+    "viewRule": "",
+    "createRule": "@request.auth.collectionName = 'admins'",
+    "updateRule": "@request.auth.collectionName = 'admins'",
+    "deleteRule": "@request.auth.collectionName = 'admins'",
+    "fields": [
+      {
+        "id": "ugcmsmn5e6",
+        "name": "businessName",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "primaryKey": false,
+        "min": null,
+        "max": 80,
+        "pattern": "",
+        "autogeneratePattern": ""
+      },
+      {
+        "id": "eucldu0um5",
+        "name": "whatsappNumber",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "primaryKey": false,
+        "min": 10,
+        "max": 15,
+        "pattern": "",
+        "autogeneratePattern": ""
+      },
+      {
+        "id": "7ocubrl5pt",
+        "name": "logo",
+        "type": "file",
+        "required": false,
+        "presentable": false,
+        "maxSelect": 1,
+        "maxSize": 5242880,
+        "mimeTypes": [
+          "image/png",
+          "image/jpeg",
+          "image/webp",
+          "image/svg+xml"
+        ],
+        "thumbs": [],
+        "protected": false
+      },
+      {
+        "id": "p5aa819t9u",
+        "name": "primaryColor",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "primaryKey": false,
+        "min": null,
+        "max": 9,
+        "pattern": "",
+        "autogeneratePattern": ""
+      },
+      {
+        "id": "m9zz8106x8",
+        "name": "secondaryColor",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "primaryKey": false,
+        "min": null,
+        "max": 9,
+        "pattern": "",
+        "autogeneratePattern": ""
+      },
+      {
+        "id": "rcd1gdiwfk",
+        "name": "accentColor",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "primaryKey": false,
+        "min": null,
+        "max": 9,
+        "pattern": "",
+        "autogeneratePattern": ""
+      },
+      {
+        "id": "gyq83mtxqw",
+        "name": "campaignExpiry",
+        "type": "date",
+        "required": false,
+        "presentable": false,
+        "min": "",
+        "max": ""
+      },
+      {
+        "id": "8y9xw1sb09",
+        "name": "terms",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "primaryKey": false,
+        "min": null,
+        "max": 2000,
+        "pattern": "",
+        "autogeneratePattern": ""
+      },
+      {
+        "id": "b9u7z3kxxz",
+        "name": "introSeconds",
+        "type": "number",
+        "required": false,
+        "presentable": false,
+        "min": 0,
+        "max": 10,
+        "onlyInt": false
+      },
+      {
+        "id": "u6z3fch26w",
+        "name": "created",
+        "type": "autodate",
+        "required": false,
+        "presentable": false,
+        "onCreate": true,
+        "onUpdate": false
+      },
+      {
+        "id": "sz14skwwch",
+        "name": "updated",
+        "type": "autodate",
+        "required": false,
+        "presentable": false,
+        "onCreate": false,
+        "onUpdate": true
+      }
+    ],
+    "indexes": []
+  },
+  {
+    "id": "anmdh4ayfatohze",
+    "name": "admins",
+    "type": "auth",
+    "system": false,
+    "listRule": null,
+    "viewRule": "id = @request.auth.id",
+    "createRule": null,
+    "updateRule": "id = @request.auth.id",
+    "deleteRule": null,
+    "authRule": "",
+    "manageRule": null,
+    "authAlert": {
+      "enabled": false,
+      "emailTemplate": {
+        "subject": "",
+        "body": ""
+      }
+    },
+    "oauth2": {
+      "enabled": false,
+      "providers": []
+    },
+    "passwordAuth": {
+      "enabled": true,
+      "identityFields": [
+        "email"
+      ]
+    },
+    "mfa": {
+      "enabled": false,
+      "duration": 0,
+      "rule": ""
+    },
+    "otp": {
+      "enabled": false,
+      "duration": 0,
+      "length": 0,
+      "emailTemplate": {
+        "subject": "",
+        "body": ""
+      }
+    },
+    "authToken": {
+      "duration": 604800
+    },
+    "passwordResetToken": {
+      "duration": 1800
+    },
+    "emailChangeToken": {
+      "duration": 1800
+    },
+    "verificationToken": {
+      "duration": 259200
+    },
+    "fileToken": {
+      "duration": 180
+    },
+    "fields": [
+      {
+        "id": "swyuwfxgzc",
+        "name": "name",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "primaryKey": false,
+        "min": null,
+        "max": 80,
+        "pattern": "",
+        "autogeneratePattern": ""
+      },
+      {
+        "id": "s8q7psk4fr",
+        "name": "created",
+        "type": "autodate",
+        "required": false,
+        "presentable": false,
+        "onCreate": true,
+        "onUpdate": false
+      },
+      {
+        "id": "4dj79n9g8t",
+        "name": "updated",
+        "type": "autodate",
+        "required": false,
+        "presentable": false,
+        "onCreate": false,
+        "onUpdate": true
+      }
+    ],
+    "indexes": []
+  },
+  {
+    "id": "q3mv0zk8t6bpx1c",
+    "name": "spins",
+    "type": "base",
+    "system": false,
+    "listRule": "@request.auth.collectionName = 'admins'",
+    "viewRule": "@request.auth.collectionName = 'admins'",
+    "createRule": "",
+    "updateRule": "@request.auth.collectionName = 'admins'",
+    "deleteRule": "@request.auth.collectionName = 'admins'",
+    "fields": [
+      {
+        "id": "pocbef85go",
+        "name": "offer",
+        "type": "relation",
+        "required": false,
+        "presentable": false,
+        "collectionId": "71hfe86y5r215de",
+        "cascadeDelete": false,
+        "minSelect": 0,
+        "maxSelect": 1
+      },
+      {
+        "id": "xy5vcqdnod",
+        "name": "fingerprint",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "primaryKey": false,
+        "min": null,
+        "max": 200,
+        "pattern": "",
+        "autogeneratePattern": ""
+      },
+      {
+        "id": "9tbl5x5ukp",
+        "name": "created",
+        "type": "autodate",
+        "required": false,
+        "presentable": false,
+        "onCreate": true,
+        "onUpdate": false
+      }
+    ],
+    "indexes": []
+  }
+]

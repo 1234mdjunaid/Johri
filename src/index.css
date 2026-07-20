@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+@theme {
+  --font-heading: "Caprasimo", serif;
+  --font-body: "Figtree", sans-serif;
+
+  /* Johri Jewellers luxury palette (from the approved design) */
+  --color-ink: #2e2838;
+  --color-deep: #4a3a73;
+  --color-royal: #5f4d8c;
+  --color-lavender: #8a76b8;
+  --color-lavender-light: #9f8cc4;
+  --color-lilac: #a992cc;
+  --color-pale: #cbbce0;
+  --color-mist: #e6ddf4;
+  --color-wisteria: #ece5f7;
+  --color-gold: #b99a5f;
+  --color-gold-light: #d8c39a;
+  --color-gold-pale: #f0e7d8;
+  --color-cream: #faf7f0;
+  --color-paper: #fffdf9;
+  --color-wash: #f1eaf8;
+  --color-muted: #6f6584;
+  --color-muted-2: #8d84a3;
+  --color-muted-3: #a99fc0;
+  --color-error: #a2543a;
+  --color-success: #5c6b42;
+  --color-success-bg: #eef2e4;
+  --color-success-border: #c9d4b8;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes pop {
+  0% { opacity: 0; transform: scale(.7); }
+  70% { transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes logoIn {
+  0% { opacity: 0; transform: scale(.86); filter: blur(6px); }
+  60% { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes sweep {
+  0% { transform: translateX(-140%) rotate(18deg); }
+  100% { transform: translateX(240%) rotate(18deg); }
+}
+@keyframes floaty {
+  0% { transform: translateY(0); opacity: 0; }
+  12% { opacity: .85; }
+  88% { opacity: .85; }
+  100% { transform: translateY(-46vh); opacity: 0; }
+}
+@keyframes fall {
+  0% { transform: translateY(-8vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(104vh) rotate(680deg); opacity: .85; }
+}
+@keyframes twinkle {
+  0%, 100% { opacity: .15; transform: scale(.7); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+@keyframes hubPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(138,118,184,.45), 0 8px 26px rgba(74,58,115,.35); }
+  50% { box-shadow: 0 0 0 14px rgba(138,118,184,0), 0 8px 26px rgba(74,58,115,.35); }
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #faf7f0;
+  overscroll-behavior-y: none;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  -webkit-tap-highlight-color: transparent;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-pale) transparent;
+}
+
+a {
+  color: var(--color-royal);
+  text-decoration: none;
+}
+
+input, textarea, select, button {
+  font-family: var(--font-body);
+}
+
+input:focus, textarea:focus, button:focus, select:focus {
+  outline: none;
+}
+
+input:focus-visible, textarea:focus-visible, button:focus-visible, select:focus-visible, a:focus-visible {
+  outline: 2px solid var(--color-lavender);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--color-mist);
+}
+
+.font-heading {
+  font-family: var(--font-heading);
+}
+
+.input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--color-mist);
+  background: var(--color-cream);
+  font-size: 14px;
+  transition: border-color .2s;
+}
+.input:focus {
+  border-color: var(--color-lavender);
+}
+.btn-outline {
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1.5px solid var(--color-lavender);
+  background: var(--color-paper);
+  color: var(--color-royal);
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-outline:hover {
+  background: var(--color-wisteria);
+}
+
+.animate-fade-up { animation: fadeUp 1s ease both; }
+.animate-fade-in { animation: fadeIn .6s ease both; }
+.animate-pop { animation: pop .7s cubic-bezier(.2,.9,.3,1.2) both; }
+.animate-logo-in { animation: logoIn 2.2s cubic-bezier(.2,.8,.2,1) both; }
+.animate-twinkle { animation: twinkle 1.6s ease infinite; }
+.animate-hub-pulse { animation: hubPulse 2.4s ease infinite; }

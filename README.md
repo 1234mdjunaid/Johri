@@ -10,6 +10,14 @@ Built with React + Vite + TypeScript + Tailwind CSS + Framer Motion + GSAP +
 React Router + PocketBase + React Hook Form + Zod + React Hot Toast + jsPDF +
 Lucide/React Icons + TanStack Query.
 
+> **Verified end-to-end locally.** The full guest flow (spin → win → claim →
+> duplicate-mobile handling → returning-guest fast path) and the full admin
+> console (login → dashboard → offers → coupons redeem toggle → CSV export →
+> settings) have been exercised against a real, self-built PocketBase v0.39.8
+> instance with `pb_hooks` loaded, including a 5-way concurrent-claim race test
+> (see [PocketBase limitations](#pocketbase-limitations-worth-knowing) for what
+> that testing surfaced and fixed).
+
 ## Contents
 
 - [How it's put together](#how-its-put-together)
@@ -17,6 +25,7 @@ Lucide/React Icons + TanStack Query.
 - [PocketBase setup](#pocketbase-setup)
 - [Environment variables](#environment-variables)
 - [Security model](#security-model)
+- [PocketBase limitations worth knowing](#pocketbase-limitations-worth-knowing)
 - [Deploying to Vercel](#deploying-to-vercel)
 - [Project structure](#project-structure)
 
@@ -97,7 +106,12 @@ existing coupon on that mobile number, and only then creates one — inside a
 transaction, with a unique DB index on `coupons.mobile` as the final backstop
 against a race between two near-simultaneous submissions. A public collection rule
 can't express "look up first, create only if missing" atomically, which is why this
-needed a real server route rather than just permissive PocketBase rules.
+needed a real server route rather than just permissive PocketBase rules. This was
+load-tested locally with 5 simultaneous requests for the same new mobile number —
+exactly one coupon was created, every response was correct. Shared helpers for the
+route live in `pb_hooks/lib.js`, loaded via `require()` rather than plain top-level
+functions — see [PocketBase limitations](#pocketbase-limitations-worth-knowing) for
+why that split is mandatory, not a style choice.
 
 ### Deploying without custom hooks
 
@@ -151,6 +165,79 @@ stored (hashed) inside PocketBase's own `admins` collection, set up in step 5 ab
 - **CSV export** — cells are quote-escaped and formula-injection-guarded (a
   customer name starting with `=`, `+`, `-`, `@` is neutralized before it's written
   to the file), since exported CSVs are usually opened directly in Excel/Sheets.
+
+## PocketBase limitations worth knowing
+
+These were found by actually running PocketBase (v0.39.8, self-built — see below)
+and driving the full claim flow against it, not from documentation alone.
+
+**JSVM hook callbacks don't close over their own file's top-level scope.**
+This is the big one. In `pb_hooks/*.pb.js`, a function passed to `routerAdd` (or
+any other hook registration) cannot see `function`/`const` bindings declared
+elsewhere at the top level of the *same file* — it throws `ReferenceError: X is
+not defined` at call time, even though the code looks like an ordinary JS
+closure and would work in Node or a browser. Verified empirically: a bare
+`function helper(){}` and a `const helperConst = () => {}` both failed to
+resolve from inside a `routerAdd` callback in the same file, while a helper
+declared *inside* the callback body worked immediately, and a helper `require()`'d
+from a separate file (`require(\`${__hooks}/lib.js\`)`) also worked. PocketBase
+appears to compile/execute each hook callback as its own isolated program rather
+than treating the file as one shared closure environment — this repo works around
+it by putting all shared logic in `pb_hooks/lib.js` and `require()`-ing it inside
+each callback (see that file's own comment for detail). If you add more hooks,
+follow the same pattern — don't rely on a top-level helper being visible inside a
+`routerAdd`/event callback in the same file.
+
+**A `Record` handle returned from `$app.runInTransaction()` is unsafe to read
+after the transaction closes.** `runInTransaction((txApp) => { ...; return
+someRecord })` and then calling `.get()` on the returned record outside the
+callback produced a generic, unhelpful error (`GoError: could not convert
+[object Object] to error` — a secondary error-marshaling failure on top of the
+real one, which made this harder to diagnose than it should have been). The fix:
+serialize whatever you need to a plain JS object *inside* the transaction
+callback, before it returns, and use that plain object afterward — never the
+`Record` handle itself. `pb_hooks/lib.js`'s `couponToJSON()` is called this way
+on purpose.
+
+**`$app.findFirstRecordByFilter()` throws when nothing matches — it does not
+return `null`/`undefined`.** The "does a coupon already exist for this mobile"
+check needs a try/catch wrapper (`findCouponByMobile()` in `lib.js`) rather than
+a truthiness check on the return value, or every fresh (non-duplicate) mobile
+number would 500 instead of proceeding.
+
+**A malformed `admins`-style auth collection in a schema import fails with a
+validation error unless every email template is filled in, even when the
+feature is disabled.** Importing `pb_schema.json` initially failed with
+`authAlert.emailTemplate: cannot be blank` / `otp.emailTemplate: cannot be
+blank` despite both features having `enabled: false`. PocketBase still validates
+the template shape. Fixed by giving both a real subject/body in the schema file.
+
+**No official Docker image or npm-distributed binary; downloading the release
+binary requires reaching `github.com` directly.** In a network-restricted
+environment (like the one this was tested in, where only package-registry
+domains were reachable), the usual "download the release zip" install path is
+blocked. The workaround that worked: PocketBase is a normal Go module, so
+`go install`/`go build` against `github.com/pocketbase/pocketbase` pulls
+everything through `proxy.golang.org` instead — but the official prebuilt CLI
+binary is actually assembled from `examples/base/main.go` upstream, which wires
+in the `jsvm` (custom JS hooks) and `migratecmd` plugins explicitly. A minimal
+`main.go` that only calls `pocketbase.New(); app.Start()` boots a working server
+with none of that — `pb_hooks/*.pb.js` is silently never loaded, no error, hook
+routes just 404. If you ever build PocketBase from source instead of using the
+release binary, you must register `plugins/jsvm` (and `plugins/migratecmd` if you
+want migrations) yourself, matching upstream's `examples/base/main.go`.
+
+**Other general constraints worth planning around**, not specific to this
+project: PocketBase is a single-process, single-SQLite-file backend — it scales
+vertically, not horizontally, and there's no built-in read-replica or
+multi-region story. Its custom-hook system (`pb_hooks`) only exists when you run
+the actual `pocketbase serve` binary yourself; managed/hosted PocketBase-as-a-
+service offerings that don't expose the filesystem generally can't run custom
+hooks, which is why this project's "one coupon per mobile" guarantee requires
+self-hosting (see [Deploying without custom hooks](#why-coupon-creation-goes-through-pb_hooks-instead-of-a-public-collection-rule)
+above). File storage is local disk by default (S3-compatible storage is
+supported but opt-in via settings). Realtime subscriptions and the JS hook VM
+pool both add memory overhead that's easy to underestimate on a small VM.
 
 ## Deploying to Vercel
 

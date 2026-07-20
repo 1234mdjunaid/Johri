@@ -13,52 +13,16 @@
  * Requires PocketBase v0.23+ (JSVM hooks). If you deploy to a managed
  * PocketBase host that does not allow custom pb_hooks, see the README's
  * "Deploying without custom hooks" note for the client-side fallback.
+ *
+ * NOTE: each routerAdd callback below requires `${__hooks}/lib.js` for shared
+ * helpers instead of referencing top-level functions in this file — PocketBase's
+ * JSVM does not let a hook callback close over this file's module scope (see
+ * pb_hooks/lib.js and the README for details).
  */
 
-const MOBILE_PATTERN = /^[6-9]\d{9}$/
-
-// Best-effort in-memory rate limit: max 8 claim attempts per IP per 10 minutes.
-// This resets whenever the PocketBase process restarts and does not span
-// multiple instances behind a load balancer — it's a spam speed-bump, not the
-// security boundary. The unique DB index on coupons.mobile is what actually
-// guarantees one coupon per number regardless of how many requests arrive.
-const RATE_LIMIT = { max: 8, windowMs: 10 * 60 * 1000 }
-const rateBuckets = new Map()
-
-function checkRateLimit(ip) {
-  const now = Date.now()
-  const bucket = rateBuckets.get(ip) || []
-  const recent = bucket.filter((t) => now - t < RATE_LIMIT.windowMs)
-  if (recent.length >= RATE_LIMIT.max) {
-    rateBuckets.set(ip, recent)
-    return false
-  }
-  recent.push(now)
-  rateBuckets.set(ip, recent)
-  return true
-}
-
-function randomCouponNumber() {
-  const suffix = $security.randomStringWithAlphabet(6, "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ")
-  return `JHR-${suffix}`
-}
-
-function couponToJSON(coupon) {
-  return {
-    id: coupon.id,
-    couponNumber: coupon.get("couponNumber"),
-    offer: coupon.get("offer"),
-    offerTitle: coupon.get("offerTitle"),
-    customer: coupon.get("customer"),
-    customerName: coupon.get("customerName"),
-    mobile: coupon.get("mobile"),
-    redeemed: coupon.get("redeemed"),
-    expiryDate: coupon.get("expiryDate"),
-    created: coupon.get("created"),
-  }
-}
-
 routerAdd("POST", "/api/spin/claim", (e) => {
+  const { MOBILE_PATTERN, randomCouponNumber, couponToJSON, checkRateLimit, findCouponByMobile } = require(`${__hooks}/lib.js`)
+
   const ip = e.realIP ? e.realIP() : "unknown"
   if (!checkRateLimit(ip)) {
     throw new ApiError(429, "Too many attempts. Please wait a few minutes and try again.")
@@ -81,7 +45,7 @@ routerAdd("POST", "/api/spin/claim", (e) => {
   }
 
   // Already claimed? Hand back the existing coupon instead of minting a new one.
-  const existing = $app.findFirstRecordByFilter("coupons", "mobile = {:mobile}", { mobile })
+  const existing = findCouponByMobile(mobile)
   if (existing) {
     return e.json(200, { coupon: couponToJSON(existing), alreadyExists: true })
   }
@@ -95,15 +59,15 @@ routerAdd("POST", "/api/spin/claim", (e) => {
   const now = new Date()
   const expiry = new Date(now.getTime() + validityDays * 86400000)
 
-  let saved = null
+  let savedJSON = null
   let lastErr = null
 
   // Retry a handful of times in case of a coupon-number collision or a
   // same-mobile race with a concurrent request; the unique DB indexes on
   // coupons.mobile / coupons.couponNumber are the real safety net.
-  for (let attempt = 0; attempt < 5 && !saved; attempt++) {
+  for (let attempt = 0; attempt < 5 && !savedJSON; attempt++) {
     try {
-      saved = $app.runInTransaction((txApp) => {
+      $app.runInTransaction((txApp) => {
         const customersCol = txApp.findCollectionByNameOrId("customers")
         const customer = new Record(customersCol)
         customer.set("name", name)
@@ -126,31 +90,39 @@ routerAdd("POST", "/api/spin/claim", (e) => {
         customer.set("couponId", coupon.id)
         txApp.save(customer)
 
-        return coupon
+        // Serialize to a plain object *while the record is still live inside
+        // the transaction* — a Record handle returned from runInTransaction
+        // is unsafe to read from afterwards once the transaction has closed
+        // (verified against PocketBase v0.39.8; see README's PocketBase
+        // limitations section).
+        savedJSON = couponToJSON(coupon)
+        return null
       })
     } catch (err) {
       lastErr = err
       // A duplicate mobile that raced us in: return the winner of that race.
-      const raced = $app.findFirstRecordByFilter("coupons", "mobile = {:mobile}", { mobile })
+      const raced = findCouponByMobile(mobile)
       if (raced) {
         return e.json(200, { coupon: couponToJSON(raced), alreadyExists: true })
       }
     }
   }
 
-  if (!saved) {
-    throw new ApiError(500, "Could not generate your coupon. Please try again.", lastErr)
+  if (!savedJSON) {
+    throw new ApiError(500, "Could not generate your coupon. Please try again.")
   }
 
-  return e.json(200, { coupon: couponToJSON(saved), alreadyExists: false })
+  return e.json(200, { coupon: savedJSON, alreadyExists: false })
 })
 
 routerAdd("GET", "/api/spin/lookup", (e) => {
+  const { MOBILE_PATTERN, couponToJSON, findCouponByMobile } = require(`${__hooks}/lib.js`)
+
   const mobile = String(e.requestInfo().query.mobile || "").trim()
   if (!MOBILE_PATTERN.test(mobile)) {
     throw new BadRequestError("Invalid mobile number.")
   }
-  const coupon = $app.findFirstRecordByFilter("coupons", "mobile = {:mobile}", { mobile })
+  const coupon = findCouponByMobile(mobile)
   if (!coupon) {
     throw new NotFoundError("No coupon found for this mobile number.")
   }

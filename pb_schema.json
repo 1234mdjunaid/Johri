@@ -434,8 +434,8 @@
     "authAlert": {
       "enabled": false,
       "emailTemplate": {
-        "subject": "",
-        "body": ""
+        "subject": "Login from a new location",
+        "body": "<p>We noticed a login to your {APP_NAME} account from a new location.</p><p>If this was you, you may disregard this email.</p><p>If this wasn't you, we suggest immediately changing your {APP_NAME} account password to reset your account credentials.</p>"
       }
     },
     "oauth2": {
@@ -455,11 +455,11 @@
     },
     "otp": {
       "enabled": false,
-      "duration": 0,
-      "length": 0,
+      "duration": 180,
+      "length": 8,
       "emailTemplate": {
-        "subject": "",
-        "body": ""
+        "subject": "OTP for {APP_NAME}",
+        "body": "<p>Hello,</p><p>Your one-time password is: <strong>{OTP}</strong></p><p><i>If you didn't ask for the OTP, you can ignore this email.</i></p>"
       }
     },
     "authToken": {

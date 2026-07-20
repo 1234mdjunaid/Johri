@@ -12,11 +12,19 @@
 FROM alpine:3.20
 
 ARG PB_VERSION=0.39.8
+# Set automatically by `docker build`/buildx to arm64 or amd64 — matters if
+# you're deploying to an ARM VM (e.g. Oracle Cloud's free-tier Ampere A1
+# instances, see DEPLOY.md), where the amd64 binary simply won't run.
+ARG TARGETARCH
 
 RUN apk add --no-cache unzip ca-certificates wget && \
-    wget -q "https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_amd64.zip" && \
-    unzip -q "pocketbase_${PB_VERSION}_linux_amd64.zip" -d /pb && \
-    rm "pocketbase_${PB_VERSION}_linux_amd64.zip"
+    case "${TARGETARCH}" in \
+      arm64) PB_ARCH=arm64 ;; \
+      *) PB_ARCH=amd64 ;; \
+    esac && \
+    wget -q "https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_${PB_ARCH}.zip" && \
+    unzip -q "pocketbase_${PB_VERSION}_linux_${PB_ARCH}.zip" -d /pb && \
+    rm "pocketbase_${PB_VERSION}_linux_${PB_ARCH}.zip"
 
 WORKDIR /pb
 COPY pb_hooks ./pb_hooks

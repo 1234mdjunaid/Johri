@@ -14,24 +14,70 @@ environment — no Docker daemon was available here, and this environment's netw
 policy blocks the GitHub download the `Dockerfile` needs. Build it on your own
 machine or your VPS, both of which will have normal internet access.
 
-## 1. Get a server
+## 1. Get a server — for $0/month
 
-Any small VPS running Ubuntu works. If you don't have one:
+PocketBase needs a real, always-on server with **persistent disk** (its database is
+a SQLite file — if the host wipes local storage on every restart, you lose all
+customers and coupons). That requirement rules out a lot of what gets called "free
+hosting": researched this before writing it down, current as of mid-2026 —
 
-- [DigitalOcean](https://www.digitalocean.com), [Hetzner](https://www.hetzner.com), or
-  [Vultr](https://www.vultr.com) all offer a $4–6/month "droplet" — pick the
-  cheapest Ubuntu 22.04/24.04 option, ~1GB RAM is plenty for this app.
-- You'll get a public **IP address** (e.g. `142.93.x.x`) — note it down.
-- If you want a real domain like `api.johrijewellers.com` for HTTPS (recommended,
-  see step 4), point an **A record** for that subdomain at the server's IP now —
-  DNS changes take a few minutes to an hour to propagate.
+| Option | Actually free? | Why / why not |
+| --- | --- | --- |
+| **Oracle Cloud "Always Free"** | ✅ Yes, forever | Real VM, real persistent disk (200GB), no time limit. Needs a card for identity verification (a $1 hold, never charged) — that's the only catch. **This is what the steps below use.** |
+| PocketHost.io | ❌ Not for one app | Purpose-built for PocketBase and supports `pb_hooks`, but it's $5/instance for your first 5 instances — not free until you already have 5 paid ones. |
+| Koyeb free tier | ❌ No | Genuinely no card required, but the free instance can't attach persistent storage and sleeps after an hour idle — your data wouldn't survive a restart. |
+| Render free tier | ❌ No | Requires a card, and free-tier services have no persistent disk either. |
+| Random "free VPS, no card" sites | ⚠️ Not recommended | These exist, but this app stores real customers' names and phone numbers — I'm not going to point you at a host I can't vouch for the reliability or trustworthiness of just to dodge a card-verification step. |
+
+So: **Oracle Cloud Always Free**. It's a real cloud VM that costs nothing,
+indefinitely, from a company that isn't going anywhere — the only friction is a
+one-time signup with card verification (not a charge).
+
+1. Sign up at [cloud.oracle.com/free](https://www.oracle.com/cloud/free/) (needs a
+   card for verification only).
+2. Create a Compute instance: **Create a VM instance** → name it anything → under
+   *Image and shape*, pick **Ubuntu 24.04**, then **Change shape** → **Ampere
+   (ARM)** → **VM.Standard.A1.Flex** → set 2 OCPU / 12GB RAM (the current free
+   allocation) — this is genuinely more machine than this app needs.
+3. Under *Networking*, let it create a new VCN (default settings are fine). Add or
+   generate an SSH key pair and **save the private key** — you'll need it to log in.
+4. Click **Create**. After a minute you'll have a public **IP address** — note it
+   down.
+5. **Open the firewall — two layers, both required.** Oracle blocks inbound
+   traffic at two separate levels, and missing either one leaves the port
+   closed with no error message:
+   - **Cloud level**: instance → the VCN's **Security List** → *Add Ingress
+     Rules* → add rules for ports `8090`, `80`, and `443` (source `0.0.0.0/0`,
+     TCP).
+   - **OS level**: Oracle's Ubuntu image also ships `iptables` rules that
+     silently drop anything but SSH, independent of the cloud firewall above.
+     Once you're SSH'd in (step 2 below), run:
+     ```bash
+     sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 8090 -j ACCEPT
+     sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
+     sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+     sudo netfilter-persistent save
+     ```
+     (Skip this OS-level step entirely if you went with a plain DigitalOcean/
+     Hetzner/Vultr VPS instead — they don't ship this extra layer.)
+6. If you want a domain like `api.johrijewellers.com` for HTTPS (recommended, see
+   step 4 below), point an **A record** at this IP now — DNS changes take a few
+   minutes to an hour to propagate.
+
+Prefer a traditional paid VPS instead (DigitalOcean, Hetzner, Vultr, ~$4–6/month)?
+Same steps from here on — just skip the Oracle-specific parts above.
 
 ## 2. SSH in and install Docker
 
-```bash
-ssh root@YOUR_SERVER_IP
+Oracle's Ubuntu images use the `ubuntu` user, not `root` (a plain VPS from
+DigitalOcean/Hetzner/Vultr is usually `root` instead — use whichever applies):
 
-curl -fsSL https://get.docker.com | sh
+```bash
+ssh -i /path/to/the-private-key-you-downloaded ubuntu@YOUR_SERVER_IP
+
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER
+# log out and back in for the group change to take effect, then continue below
 ```
 
 ## 3. Get the app onto the server and start it

@@ -27,7 +27,14 @@ available in the environment I built this in.
 1. Go to [railway.app](https://railway.com) and sign up with GitHub (no card
    needed to start the trial).
 2. **New Project** → **Deploy from GitHub repo** → pick `1234mdjunaid/Johri`.
-   Railway finds the `Dockerfile` at the repo root and builds it automatically.
+   - **Railway will likely misdetect the build**: this repo also has a
+     `package.json` at the root (the Vite frontend), so Railway's default
+     builder (Railpack) tries to build that instead of noticing the
+     `Dockerfile`, and the build fails immediately with "Railpack failed to
+     produce a build plan." If you hit this, go to the service → **Settings**
+     → **Build** → set **Builder** to `Dockerfile`, **Dockerfile Path** to
+     `Dockerfile` → redeploy. (Railway's own error message links a "Use
+     Dockerfile builder" button that does the same thing.)
 3. Add persistent storage: on the new service → **Volumes** tab → **New Volume**
    → mount path `/pb/pb_data`. Without this step your data would be wiped on
    every redeploy.

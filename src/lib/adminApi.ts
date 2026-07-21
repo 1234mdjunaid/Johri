@@ -1,3 +1,4 @@
+import { ClientResponseError } from 'pocketbase'
 import { pb } from '@/lib/pocketbase'
 import type { CouponRecord, OfferRecord, SettingsRecord, SpinRecord } from '@/types'
 
@@ -127,8 +128,21 @@ export async function fetchAdminSettings(): Promise<SettingsRecord | null> {
 }
 
 export async function saveSettings(id: string | null, data: Partial<SettingsRecord> | FormData): Promise<SettingsRecord> {
-  if (id) return pb.collection('settings').update<SettingsRecord>(id, data)
-  return pb.collection('settings').create<SettingsRecord>(data)
+  if (id) {
+    try {
+      return await pb.collection('settings').update<SettingsRecord>(id, data)
+    } catch (err) {
+      if (!(err instanceof ClientResponseError) || err.status !== 404) throw err
+      // Cached id is stale (e.g. the admin tab sat open across a backend
+      // redeploy/reset) — fall through and resolve the real current record.
+    }
+  }
+  try {
+    const existing = await pb.collection('settings').getFirstListItem<SettingsRecord>('')
+    return await pb.collection('settings').update<SettingsRecord>(existing.id, data)
+  } catch {
+    return pb.collection('settings').create<SettingsRecord>(data)
+  }
 }
 
 const FORMULA_LEADERS = ['=', '+', '-', '@', '\t', '\r']

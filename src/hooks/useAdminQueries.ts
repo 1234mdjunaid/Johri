@@ -33,16 +33,20 @@ export function useCouponsList(search: string, status: 'all' | 'redeemed' | 'pen
     queryKey: ['admin', 'coupons', 'list', search, status],
     queryFn: () => fetchCoupons({ search, status }),
     staleTime: 10_000,
+    refetchOnMount: 'always',
   })
 }
 
 export function useToggleCouponRedeemed() {
   const qc = useQueryClient()
+  const invalidate = () => void qc.invalidateQueries({ queryKey: ['admin'] })
   return useMutation({
     mutationFn: ({ id, redeemed }: { id: string; redeemed: boolean }) => setCouponRedeemed(id, redeemed),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['admin'] })
-    },
+    onSuccess: invalidate,
+    // Also refetch on failure — a 404 here usually means this row is stale
+    // (deleted server-side since the list was last loaded); refetching
+    // drops it from the table instead of leaving a dead row to keep clicking.
+    onError: invalidate,
   })
 }
 
@@ -67,7 +71,11 @@ export function useResetCampaignData() {
 }
 
 export function useAllOffers() {
-  return useQuery({ queryKey: ['admin', 'offers'], queryFn: fetchAllOffers, staleTime: 10_000 })
+  // Always refetch on mount (not just when stale) — this is a low-traffic
+  // admin console where a phantom row from a long-stale cache (e.g. the tab
+  // sat open across a backend redeploy) causes real bugs: editing/toggling
+  // a record that no longer exists 404s with no obvious cause from the UI.
+  return useQuery({ queryKey: ['admin', 'offers'], queryFn: fetchAllOffers, staleTime: 10_000, refetchOnMount: 'always' })
 }
 
 export function useOfferMutations() {
@@ -84,6 +92,9 @@ export function useOfferMutations() {
   const update = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<OfferRecord> }) => updateOffer(id, data),
     onSuccess: invalidate,
+    // Same reasoning as the coupon toggle above: a stale/deleted offer row
+    // should disappear on refetch rather than keep failing silently.
+    onError: invalidate,
   })
   const remove = useMutation({
     mutationFn: (id: string) => deleteOffer(id),
@@ -93,7 +104,7 @@ export function useOfferMutations() {
 }
 
 export function useAdminSettings() {
-  return useQuery({ queryKey: ['admin', 'settings'], queryFn: fetchAdminSettings, staleTime: 10_000 })
+  return useQuery({ queryKey: ['admin', 'settings'], queryFn: fetchAdminSettings, staleTime: 10_000, refetchOnMount: 'always' })
 }
 
 export function useSaveSettings() {

@@ -1,7 +1,21 @@
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
+import { ClientResponseError } from 'pocketbase'
 import { adminLogin } from '@/lib/adminApi'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
+
+function describeLoginError(err: unknown): string {
+  if (err instanceof ClientResponseError) {
+    if (err.status === 0) {
+      return "Can't reach the server — check VITE_POCKETBASE_URL is set correctly and the backend is running."
+    }
+    if (err.status === 400) {
+      return 'Incorrect email or password.'
+    }
+    return `Login failed (HTTP ${err.status}). ${err.message || 'Please try again.'}`
+  }
+  return "Can't reach the server — this usually means the backend URL is wrong, unreachable, or blocked by CORS."
+}
 
 export function AdminLoginPage() {
   const { isAuthed } = useAdminAuth()
@@ -22,8 +36,8 @@ export function AdminLoginPage() {
     setLoading(true)
     try {
       await adminLogin(email.trim(), password)
-    } catch {
-      setError('Incorrect email or password.')
+    } catch (err) {
+      setError(describeLoginError(err))
     } finally {
       setLoading(false)
     }

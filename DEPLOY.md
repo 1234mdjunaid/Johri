@@ -142,14 +142,30 @@ VITE_POCKETBASE_URL=https://YOUR-APP.up.railway.app
 (or your Oracle domain/IP), then redeploy. The wheel should now load real offers,
 and `/admin` should log in with the credentials above.
 
+## PocketBase's own dashboard (for debugging, not day-to-day use)
+
+`pb_migrations/1700000002_create_superuser.js` automatically creates a
+PocketBase *superuser* account too, using the same
+`johriretailers@gmail.com` / `JohriGolds@123` credentials by default — this is
+different from the app's `/admin` login (that one only grants access to this
+app's data; a superuser gets PocketBase's own built-in dashboard). Visit
+`https://YOUR-BACKEND-URL/_/` and log in with those same credentials to see it.
+
+This is mainly useful for **Settings → Logs**, which shows the real
+server-side error behind any generic frontend message ("Failed to create
+record.", etc.) — deliberately *not* something to expose by running the server
+with `--dev` in production, since that flag leaks the same detail straight
+into public API responses instead of keeping it behind this login.
+
 ## Lock it down
 
 Once confirmed working:
 
-- **Change the admin password** — edit the `admins` record in PocketBase's own
-  dashboard (`/_/`, after creating a PocketBase superuser there — separate from
-  the app's admin login, see README), or change `PB_ADMIN_PASSWORD` and re-create
-  the record.
+- **Change both admin passwords** — the app's own (`admins` collection) and
+  PocketBase's superuser (`_superusers`) — either edit the records directly in
+  PocketBase's dashboard, or change `PB_ADMIN_PASSWORD` and delete the existing
+  record so the migration recreates it (it only creates one if none exists with
+  that email).
 - **Restrict CORS** (PocketBase dashboard → Settings → General) to your actual
   Vercel domain once you're done testing.
 - **Set up backups** — PocketBase's dashboard has a built-in backup feature

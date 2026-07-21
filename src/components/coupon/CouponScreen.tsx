@@ -5,7 +5,7 @@ import { Download } from 'lucide-react'
 import { FaWhatsapp } from 'react-icons/fa'
 import { CouponCard } from '@/components/coupon/CouponCard'
 import { ParticlesField } from '@/components/shared/ParticlesField'
-import { downloadCouponPdf } from '@/lib/pdf'
+import { downloadCouponImage } from '@/lib/couponImage'
 import { buildWhatsAppLink } from '@/lib/whatsapp'
 import type { CouponRecord } from '@/types'
 
@@ -23,9 +23,9 @@ export function CouponScreen({ coupon, terms, businessName, whatsappNumber, note
   const handleDownload = async () => {
     setDownloading(true)
     try {
-      await downloadCouponPdf(coupon, terms, businessName)
+      await downloadCouponImage(coupon, terms, businessName)
     } catch {
-      toast.error('Could not generate the PDF. Please try again.')
+      toast.error('Could not save the coupon image. Please try again.')
     } finally {
       setDownloading(false)
     }
@@ -58,7 +58,7 @@ export function CouponScreen({ coupon, terms, businessName, whatsappNumber, note
           style={{ background: 'linear-gradient(135deg,#8a76b8,#5f4d8c)' }}
         >
           <Download size={18} />
-          {downloading ? 'Preparing PDF…' : 'Download coupon'}
+          {downloading ? 'Saving…' : 'Save coupon'}
         </button>
         <button
           onClick={handleWhatsApp}

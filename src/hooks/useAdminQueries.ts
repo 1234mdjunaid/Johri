@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createOffer,
+  deleteCouponAndCustomer,
   deleteOffer,
   fetchAdminSettings,
   fetchAllOffers,
@@ -8,11 +9,12 @@ import {
   fetchDashboardStats,
   fetchRecentCoupons,
   fetchSpinsSeries,
+  resetCampaignData,
   saveSettings,
   setCouponRedeemed,
   updateOffer,
 } from '@/lib/adminApi'
-import type { OfferRecord, SettingsRecord } from '@/types'
+import type { CouponRecord, OfferRecord, SettingsRecord } from '@/types'
 
 export function useDashboardStats() {
   return useQuery({ queryKey: ['admin', 'stats'], queryFn: fetchDashboardStats, staleTime: 15_000 })
@@ -38,6 +40,26 @@ export function useToggleCouponRedeemed() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, redeemed }: { id: string; redeemed: boolean }) => setCouponRedeemed(id, redeemed),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin'] })
+    },
+  })
+}
+
+export function useDeleteCoupon() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (coupon: CouponRecord) => deleteCouponAndCustomer(coupon),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin'] })
+    },
+  })
+}
+
+export function useResetCampaignData() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => resetCampaignData(),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['admin'] })
     },

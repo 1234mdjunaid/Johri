@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import { useAdminSettings, useSaveSettings, useCouponsList } from '@/hooks/useAdminQueries'
+import { useAdminSettings, useSaveSettings, useCouponsList, useResetCampaignData } from '@/hooks/useAdminQueries'
 import { downloadCSV } from '@/lib/adminApi'
 import { pb } from '@/lib/pocketbase'
 import { describeError } from '@/lib/errors'
@@ -9,6 +9,9 @@ export function AdminSettingsPage() {
   const { data: settings, isLoading } = useAdminSettings()
   const saveSettings = useSaveSettings()
   const { data: allCoupons } = useCouponsList('', 'all')
+  const resetData = useResetCampaignData()
+  const [resetConfirmText, setResetConfirmText] = useState('')
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
 
   const [businessName, setBusinessName] = useState('')
   const [whatsappNumber, setWhatsappNumber] = useState('')
@@ -81,6 +84,19 @@ export function AdminSettingsPage() {
         expiryDate: c.expiryDate,
       })),
     )
+  }
+
+  const handleReset = () => {
+    resetData.mutate(undefined, {
+      onSuccess: (deleted) => {
+        toast.success(
+          `Reset complete — removed ${deleted.coupons} coupon(s), ${deleted.customers} customer(s), ${deleted.spins} spin record(s). Coupon numbers restart from JHR-000001.`,
+        )
+        setShowResetConfirm(false)
+        setResetConfirmText('')
+      },
+      onError: (err) => toast.error(describeError(err, 'Could not reset campaign data.')),
+    })
   }
 
   const logoUrl = settings?.logo ? pb.files.getURL(settings, settings.logo) : '/assets/johri-logo-lavender.png'
@@ -156,6 +172,50 @@ export function AdminSettingsPage() {
           For a full database backup (all collections and files), use PocketBase&apos;s built-in backup from the
           Admin UI under Settings → Backups.
         </p>
+      </div>
+
+      <div className="rounded-[20px] border-[1.5px] border-[#efdcd4] bg-[#fdf6f3] p-5">
+        <div className="text-error mb-2 text-[11.5px] tracking-[.16em] uppercase">Danger zone</div>
+        <p className="text-muted-2 mb-3 text-[13px]">
+          Permanently deletes every customer, coupon, and spin record — for starting a fresh campaign. Offers,
+          settings, and your admin login are not touched. Coupon numbers restart from JHR-000001. This cannot be
+          undone.
+        </p>
+        {!showResetConfirm ? (
+          <button
+            onClick={() => setShowResetConfirm(true)}
+            className="border-error text-error h-10 cursor-pointer rounded-full border-[1.5px] bg-transparent px-[18px] text-[13.5px] font-bold hover:bg-[#f7e9e3]"
+          >
+            Reset all campaign data
+          </button>
+        ) : (
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+            <input
+              value={resetConfirmText}
+              onChange={(e) => setResetConfirmText(e.target.value)}
+              placeholder='Type "RESET" to confirm'
+              className="input sm:max-w-[220px]"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleReset}
+                disabled={resetConfirmText !== 'RESET' || resetData.isPending}
+                className="bg-error h-10 cursor-pointer rounded-full px-[18px] text-[13.5px] font-bold text-paper disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {resetData.isPending ? 'Resetting…' : 'Confirm reset'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowResetConfirm(false)
+                  setResetConfirmText('')
+                }}
+                className="btn-outline"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

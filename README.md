@@ -2,13 +2,13 @@
 
 A single-page luxury promotional campaign: guests watch a cinematic splash, spin an
 animated wheel, win an offer, claim it with their name and mobile number, get a
-gold-embossed coupon they can download as a PDF or send straight to the store on
-WhatsApp — and the owner runs the whole campaign from a password-protected `/admin`
-console.
+gold-embossed coupon they can save straight to their phone's photo gallery or send
+to the store on WhatsApp — and the owner runs the whole campaign from a
+password-protected `/admin` console.
 
 Built with React + Vite + TypeScript + Tailwind CSS + Framer Motion + GSAP +
-React Router + PocketBase + React Hook Form + Zod + React Hot Toast + jsPDF +
-Lucide/React Icons + TanStack Query.
+React Router + PocketBase + React Hook Form + Zod + React Hot Toast + the Canvas
+API (for the coupon image) + Lucide/React Icons + TanStack Query.
 
 > **Verified end-to-end locally.** The full guest flow (spin → win → claim →
 > duplicate-mobile handling → returning-guest fast path) and the full admin

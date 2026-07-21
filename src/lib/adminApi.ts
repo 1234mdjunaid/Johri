@@ -78,6 +78,30 @@ export async function setCouponRedeemed(id: string, redeemed: boolean): Promise<
   return pb.collection('coupons').update<CouponRecord>(id, { redeemed })
 }
 
+/**
+ * Deletes a coupon and its linked customer record together — this is what
+ * actually lets that mobile number spin and claim again, since the
+ * uniqueness check looks for an existing customer/coupon by mobile.
+ */
+export async function deleteCouponAndCustomer(coupon: CouponRecord): Promise<void> {
+  await pb.collection('coupons').delete(coupon.id)
+  if (coupon.customer) {
+    try {
+      await pb.collection('customers').delete(coupon.customer)
+    } catch {
+      // Already gone or never existed — the coupon deletion is what matters.
+    }
+  }
+}
+
+export async function resetCampaignData(): Promise<{ coupons: number; customers: number; spins: number }> {
+  const res = await pb.send<{ ok: boolean; deleted: { coupons: number; customers: number; spins: number } }>(
+    '/api/admin/reset',
+    { method: 'POST' },
+  )
+  return res.deleted
+}
+
 export async function fetchAllOffers(): Promise<OfferRecord[]> {
   return pb.collection('offers').getFullList<OfferRecord>({ sort: 'created' })
 }

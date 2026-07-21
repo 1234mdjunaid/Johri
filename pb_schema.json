@@ -556,5 +556,61 @@
       }
     ],
     "indexes": []
+  },
+  {
+    "id": "7kww6ezqzvsf057",
+    "name": "counters",
+    "type": "base",
+    "system": false,
+    "listRule": "@request.auth.collectionName = 'admins'",
+    "viewRule": "@request.auth.collectionName = 'admins'",
+    "createRule": "@request.auth.collectionName = 'admins'",
+    "updateRule": "@request.auth.collectionName = 'admins'",
+    "deleteRule": "@request.auth.collectionName = 'admins'",
+    "fields": [
+      {
+        "id": "q81ookhbwv",
+        "name": "key",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "primaryKey": false,
+        "min": 1,
+        "max": 60,
+        "pattern": "",
+        "autogeneratePattern": ""
+      },
+      {
+        "id": "1ua9u718w9",
+        "name": "value",
+        "type": "number",
+        "required": false,
+        "presentable": false,
+        "min": 0,
+        "max": null,
+        "onlyInt": true
+      },
+      {
+        "id": "bl7afes3hl",
+        "name": "created",
+        "type": "autodate",
+        "required": false,
+        "presentable": false,
+        "onCreate": true,
+        "onUpdate": false
+      },
+      {
+        "id": "0kaxlmppkj",
+        "name": "updated",
+        "type": "autodate",
+        "required": false,
+        "presentable": false,
+        "onCreate": false,
+        "onUpdate": true
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX `idx_counters_key` ON `counters` (`key`)"
+    ]
   }
 ]

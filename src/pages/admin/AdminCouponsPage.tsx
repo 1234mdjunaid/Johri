@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import toast from 'react-hot-toast'
-import { useCouponsList, useToggleCouponRedeemed } from '@/hooks/useAdminQueries'
+import { Trash2 } from 'lucide-react'
+import { useCouponsList, useDeleteCoupon, useToggleCouponRedeemed } from '@/hooks/useAdminQueries'
 import { downloadCSV } from '@/lib/adminApi'
 import { formatDate } from '@/lib/date'
 import { describeError } from '@/lib/errors'
+import type { CouponRecord } from '@/types'
 
 type StatusFilter = 'all' | 'pending' | 'redeemed'
 
@@ -18,6 +20,18 @@ export function AdminCouponsPage() {
   const [status, setStatus] = useState<StatusFilter>('all')
   const { data: coupons, isLoading } = useCouponsList(search, status)
   const toggle = useToggleCouponRedeemed()
+  const deleteCoupon = useDeleteCoupon()
+
+  const handleDelete = (coupon: CouponRecord) => {
+    if (
+      !confirm(
+        `Delete coupon ${coupon.couponNumber} for ${coupon.customerName} (${coupon.mobile})?\n\nThis also removes their customer record, so this mobile number will be able to spin and claim again. This cannot be undone.`,
+      )
+    ) {
+      return
+    }
+    deleteCoupon.mutate(coupon, { onError: (err) => toast.error(describeError(err, 'Could not delete this coupon.')) })
+  }
 
   const handleExport = () => {
     if (!coupons || coupons.length === 0) {
@@ -82,20 +96,21 @@ export function AdminCouponsPage() {
                 <th className="px-2.5 py-3 font-semibold">Mobile</th>
                 <th className="px-2.5 py-3 font-semibold">Offer</th>
                 <th className="px-2.5 py-3 font-semibold">Created</th>
-                <th className="px-[18px] py-3 font-semibold">Status</th>
+                <th className="px-2.5 py-3 font-semibold">Status</th>
+                <th className="px-[18px] py-3 font-semibold"></th>
               </tr>
             </thead>
             <tbody>
               {isLoading && (
                 <tr>
-                  <td colSpan={6} className="text-muted-3 px-[18px] py-8 text-center">
+                  <td colSpan={7} className="text-muted-3 px-[18px] py-8 text-center">
                     Loading…
                   </td>
                 </tr>
               )}
               {!isLoading && (coupons?.length ?? 0) === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-muted-3 px-[18px] py-8 text-center">
+                  <td colSpan={7} className="text-muted-3 px-[18px] py-8 text-center">
                     No coupons match this search yet.
                   </td>
                 </tr>
@@ -123,6 +138,16 @@ export function AdminCouponsPage() {
                       }`}
                     >
                       {c.redeemed ? 'Redeemed' : 'Pending'}
+                    </button>
+                  </td>
+                  <td className="px-[18px] py-3">
+                    <button
+                      onClick={() => handleDelete(c)}
+                      disabled={deleteCoupon.isPending}
+                      title="Delete coupon and customer record"
+                      className="text-error flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-full border-[1.5px] border-[#efdcd4] bg-transparent hover:bg-[#f7e9e3] disabled:opacity-50"
+                    >
+                      <Trash2 size={14} />
                     </button>
                   </td>
                 </tr>

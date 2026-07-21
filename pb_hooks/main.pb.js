@@ -21,7 +21,7 @@
  */
 
 routerAdd("POST", "/api/spin/claim", (e) => {
-  const { MOBILE_PATTERN, randomCouponNumber, couponToJSON, checkRateLimit, findCouponByMobile } = require(`${__hooks}/lib.js`)
+  const { MOBILE_PATTERN, nextCouponNumber, couponToJSON, checkRateLimit, findCouponByMobile } = require(`${__hooks}/lib.js`)
 
   const ip = e.realIP ? e.realIP() : "unknown"
   if (!checkRateLimit(ip)) {
@@ -77,7 +77,7 @@ routerAdd("POST", "/api/spin/claim", (e) => {
 
         const couponsCol = txApp.findCollectionByNameOrId("coupons")
         const coupon = new Record(couponsCol)
-        coupon.set("couponNumber", randomCouponNumber())
+        coupon.set("couponNumber", nextCouponNumber(txApp))
         coupon.set("offer", offer.id)
         coupon.set("offerTitle", offer.get("title"))
         coupon.set("customer", customer.id)
@@ -128,3 +128,40 @@ routerAdd("GET", "/api/spin/lookup", (e) => {
   }
   return e.json(200, couponToJSON(coupon))
 })
+
+// Admin-only: wipes every customer, coupon, and spin record (and resets the
+// coupon number sequence back to 0) so a fresh campaign can start clean.
+// Offers, settings, and the admin/superuser logins are untouched.
+// $apis.requireAuth("admins") rejects the request with 401 before this
+// handler ever runs unless the caller has a valid token issued by the
+// "admins" auth collection specifically — required because routerAdd
+// handlers otherwise run with full server privileges regardless of caller,
+// bypassing every collection rule.
+routerAdd(
+  "POST",
+  "/api/admin/reset",
+  (e) => {
+    let deleted = { coupons: 0, customers: 0, spins: 0 }
+    $app.runInTransaction((txApp) => {
+      ;["coupons", "customers", "spins"].forEach((name) => {
+        const records = txApp.findRecordsByFilter(name, "id != ''", "", 0, 0)
+        records.forEach((r) => txApp.delete(r))
+        deleted[name] = records.length
+      })
+
+      let counter = null
+      try {
+        counter = txApp.findFirstRecordByFilter("counters", "key = 'coupon_seq'", {})
+      } catch (err) {
+        counter = null
+      }
+      if (counter) {
+        counter.set("value", 0)
+        txApp.save(counter)
+      }
+      return null
+    })
+    return e.json(200, { ok: true, deleted })
+  },
+  $apis.requireAuth("admins"),
+)

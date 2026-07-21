@@ -9,9 +9,28 @@
 
 const MOBILE_PATTERN = /^[6-9]\d{9}$/
 
-function randomCouponNumber() {
-  const suffix = $security.randomStringWithAlphabet(6, "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ")
-  return `JHR-${suffix}`
+// Sequential coupon numbers (JHR-000001, JHR-000002, ...) via a single-row
+// counter record, incremented atomically inside the same transaction as the
+// coupon insert — pass the transaction's `txApp`, not the outer `$app`, so a
+// rolled-back claim (e.g. a losing race on a duplicate mobile) also rolls
+// back the increment instead of leaving a gap.
+function nextCouponNumber(txApp) {
+  let counter = null
+  try {
+    counter = txApp.findFirstRecordByFilter("counters", "key = 'coupon_seq'", {})
+  } catch (err) {
+    counter = null
+  }
+  if (!counter) {
+    const countersCol = txApp.findCollectionByNameOrId("counters")
+    counter = new Record(countersCol)
+    counter.set("key", "coupon_seq")
+    counter.set("value", 0)
+  }
+  const next = Number(counter.get("value") || 0) + 1
+  counter.set("value", next)
+  txApp.save(counter)
+  return "JHR-" + String(next).padStart(6, "0")
 }
 
 // $app.findFirstRecordByFilter throws (rather than returning null/undefined)
@@ -61,4 +80,4 @@ function checkRateLimit(ip) {
   return true
 }
 
-module.exports = { MOBILE_PATTERN, randomCouponNumber, couponToJSON, checkRateLimit, findCouponByMobile }
+module.exports = { MOBILE_PATTERN, nextCouponNumber, couponToJSON, checkRateLimit, findCouponByMobile }

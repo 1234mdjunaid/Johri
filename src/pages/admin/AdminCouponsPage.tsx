@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import { useCouponsList, useToggleCouponRedeemed } from '@/hooks/useAdminQueries'
 import { downloadCSV } from '@/lib/adminApi'
 import { formatDate } from '@/lib/date'
+import { describeError } from '@/lib/errors'
 
 type StatusFilter = 'all' | 'pending' | 'redeemed'
 
@@ -108,7 +109,12 @@ export function AdminCouponsPage() {
                   <td className="text-muted-2 px-2.5 py-3 whitespace-nowrap">{formatDate(c.created)}</td>
                   <td className="px-[18px] py-3">
                     <button
-                      onClick={() => toggle.mutate({ id: c.id, redeemed: !c.redeemed })}
+                      onClick={() =>
+                        toggle.mutate(
+                          { id: c.id, redeemed: !c.redeemed },
+                          { onError: (err) => toast.error(describeError(err, 'Could not update this coupon.')) },
+                        )
+                      }
                       disabled={toggle.isPending}
                       className={`h-[30px] cursor-pointer rounded-full border-[1.5px] px-3.5 text-xs font-bold whitespace-nowrap ${
                         c.redeemed

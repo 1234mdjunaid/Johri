@@ -10,6 +10,7 @@ import { useSettings } from '@/hooks/useSettings'
 import { claimCoupon, lookupCouponByMobile } from '@/lib/api'
 import { getFingerprint } from '@/lib/fingerprint'
 import { readLocalClaim, saveLocalClaim } from '@/lib/localSpinGuard'
+import { describeError } from '@/lib/errors'
 import { env } from '@/config/env'
 import type { CampaignScreen, ClaimResponse, CouponRecord, WheelOffer } from '@/types'
 import type { ClaimFormValues } from '@/lib/validation'
@@ -82,8 +83,7 @@ export function CampaignPage() {
       })
       setScreen('coupon')
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
-      toast.error(message)
+      toast.error(describeError(err))
     } finally {
       setSubmitting(false)
     }

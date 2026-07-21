@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import { useAdminSettings, useSaveSettings, useCouponsList } from '@/hooks/useAdminQueries'
 import { downloadCSV } from '@/lib/adminApi'
 import { pb } from '@/lib/pocketbase'
+import { describeError } from '@/lib/errors'
 
 export function AdminSettingsPage() {
   const { data: settings, isLoading } = useAdminSettings()
@@ -47,7 +48,7 @@ export function AdminSettingsPage() {
           toast.success('Settings saved.')
           setLogoFile(null)
         },
-        onError: () => toast.error('Could not save settings.'),
+        onError: (err) => toast.error(describeError(err, 'Could not save settings.')),
       },
     )
   }

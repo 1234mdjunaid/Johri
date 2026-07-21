@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import { OfferEditorRow } from '@/components/admin/OfferEditorRow'
 import { useAllOffers, useOfferMutations, useAdminSettings, useSaveSettings } from '@/hooks/useAdminQueries'
 import { buildWheelSegments } from '@/lib/wheelMath'
+import { describeError } from '@/lib/errors'
 import type { OfferRecord } from '@/types'
 
 const PALETTE = ['#6b5a96', '#8a76b8', '#a992cc', '#cbbce0', '#e6ddf4', '#b99a5f', '#d8c39a', '#f0e7d8']
@@ -30,23 +31,29 @@ export function AdminOffersPage() {
     const color = PALETTE[(offers?.length ?? 0) % PALETTE.length]
     create.mutate(
       { title: 'New offer', description: '', probability: 2, wheelColor: color, active: true, validityDays: 30 },
-      { onError: () => toast.error('Could not create the offer.') },
+      { onError: (err) => toast.error(describeError(err, 'Could not create the offer.')) },
     )
   }
 
   const handleUpdate = (offer: OfferRecord, patch: Partial<OfferRecord>) => {
-    update.mutate({ id: offer.id, data: patch }, { onError: () => toast.error('Could not save the change.') })
+    update.mutate(
+      { id: offer.id, data: patch },
+      { onError: (err) => toast.error(describeError(err, 'Could not save the change.')) },
+    )
   }
 
   const handleDelete = (offer: OfferRecord) => {
     if (!confirm(`Delete "${offer.title}"? This cannot be undone.`)) return
-    remove.mutate(offer.id, { onError: () => toast.error('Could not delete the offer.') })
+    remove.mutate(offer.id, { onError: (err) => toast.error(describeError(err, 'Could not delete the offer.')) })
   }
 
   const handleSaveTerms = () => {
     saveSettings.mutate(
       { id: settings?.id ?? null, data: { terms: termsValue, businessName: settings?.businessName || 'Johri Jewellers', whatsappNumber: settings?.whatsappNumber || '' } },
-      { onSuccess: () => toast.success('Terms updated.'), onError: () => toast.error('Could not save terms.') },
+      {
+        onSuccess: () => toast.success('Terms updated.'),
+        onError: (err) => toast.error(describeError(err, 'Could not save terms.')),
+      },
     )
   }
 
@@ -88,10 +95,17 @@ export function AdminOffersPage() {
             <textarea
               value={termsValue}
               onChange={(e) => setTerms(e.target.value)}
-              onBlur={handleSaveTerms}
               rows={3}
               className="border-mist focus:border-lavender w-full resize-y rounded-xl border-[1.5px] bg-cream px-3.5 py-3 text-[13px] leading-[1.5]"
             />
+            <button
+              onClick={handleSaveTerms}
+              disabled={saveSettings.isPending}
+              className="mt-3 h-10 cursor-pointer rounded-full border-none px-[18px] text-[13.5px] font-bold text-paper disabled:opacity-70"
+              style={{ background: 'linear-gradient(135deg,#8a76b8,#5f4d8c)' }}
+            >
+              {saveSettings.isPending ? 'Saving…' : 'Save terms'}
+            </button>
           </div>
         </div>
 

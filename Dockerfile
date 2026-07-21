@@ -32,7 +32,11 @@ COPY pb_migrations ./pb_migrations
 COPY pb_schema.json ./pb_schema.json
 
 EXPOSE 8090
-VOLUME /pb/pb_data
+# No VOLUME instruction here on purpose: Railway's build system rejects
+# Dockerfiles that declare one ("VOLUME ... is not supported"). Persistence
+# on Railway comes entirely from the Volume you mount at /pb/pb_data in its
+# dashboard (see DEPLOY.md); on plain Docker/Compose the named volume in
+# docker-compose.yml handles it the same way without needing this line.
 
 # Defaults match the app's documented demo credentials — override both in
 # production (see DEPLOY.md).

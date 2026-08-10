@@ -3,6 +3,24 @@ import type { OfferRecord } from '@/types'
 
 const PALETTE = ['#6b5a96', '#8a76b8', '#a992cc', '#cbbce0', '#e6ddf4', '#b99a5f', '#d8c39a', '#f0e7d8']
 
+// The backend only stores a day-count (validityDays), computed fresh into an
+// expiryDate at the moment each coupon is claimed — so the calendar picker
+// here just converts a chosen date to/from "days from today" for display.
+function addDaysToToday(days: number): string {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+function daysFromToday(dateStr: string): number {
+  const target = new Date(`${dateStr}T00:00:00`)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const diff = Math.round((target.getTime() - today.getTime()) / 86_400_000)
+  return Math.max(1, diff)
+}
+
 interface OfferEditorRowProps {
   offer: OfferRecord
   totalActiveWeight: number
@@ -12,10 +30,10 @@ interface OfferEditorRowProps {
 
 export function OfferEditorRow({ offer, totalActiveWeight, onUpdate, onDelete }: OfferEditorRowProps) {
   const [title, setTitle] = useState(offer.title)
-  const [validityDays, setValidityDays] = useState(offer.validityDays)
+  const [validUntil, setValidUntil] = useState(() => addDaysToToday(offer.validityDays))
 
   useEffect(() => setTitle(offer.title), [offer.title])
-  useEffect(() => setValidityDays(offer.validityDays), [offer.validityDays])
+  useEffect(() => setValidUntil(addDaysToToday(offer.validityDays)), [offer.validityDays])
 
   const pct = offer.active && totalActiveWeight ? `${Math.round((offer.probability / totalActiveWeight) * 100)}%` : '—'
 
@@ -63,17 +81,18 @@ export function OfferEditorRow({ offer, totalActiveWeight, onUpdate, onDelete }:
           <b className="text-royal whitespace-nowrap">{pct}</b>
         </label>
         <label className="text-muted flex items-center gap-2 text-[12.5px]">
-          Valid
+          Valid until
           <input
-            type="number"
-            min={1}
-            max={365}
-            value={validityDays}
-            onChange={(e) => setValidityDays(Math.max(1, Number(e.target.value) || 1))}
-            onBlur={() => validityDays !== offer.validityDays && onUpdate({ validityDays })}
-            className="border-mist focus:border-lavender h-8 w-[58px] rounded-[10px] border-[1.5px] bg-cream px-2 text-[13px]"
+            type="date"
+            min={addDaysToToday(1)}
+            value={validUntil}
+            onChange={(e) => {
+              const next = e.target.value
+              setValidUntil(next)
+              if (next) onUpdate({ validityDays: daysFromToday(next) })
+            }}
+            className="border-mist focus:border-lavender h-8 rounded-[10px] border-[1.5px] bg-cream px-2 text-[13px]"
           />
-          days
         </label>
         <div className="flex items-center gap-1.5">
           {PALETTE.map((c) => (
